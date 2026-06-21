@@ -2,7 +2,7 @@ import random
 import enchant
 
 wordle = [""] * 5
-word = input("Известные буквы (Введи > 5 для жёлтой): ")
+word = input("Известные буквы: ")
 ban = list(input("Буквы для бана: "))
 iters = int(input("Итераций(для перестановки букв с неизвестной позицией): "))
 repetitions = int(input("Раз генерации слова (Рек.: > 200): "))
@@ -15,7 +15,7 @@ def random_index(wordle):
 
 #Для каждой введённой буквы
 for i in range(len(word)):
-    indx = int(input(f"На каком месте находится '{word[i]}'?: "))
+    indx = int(input(f"Позиция буквы '{word[i]}' (Введи > 5 для жёлтой): "))
     indx -= 1 #Чтобы вводить место буквы, а не её индекс
     if 0 <= indx < 5:
         wordle[indx] = word[i]
@@ -40,6 +40,9 @@ def is_english_word(word):
     d = enchant.Dict("en_US")
     return d.check(word)
 
+total_iterations = iters * repetitions
+current_iteration = 0
+
 for i in range(iters):
     # Перемешивание неизвестных букв
     unknown_letters = unknown.copy()
@@ -47,6 +50,10 @@ for i in range(iters):
 
     #Создание слов (По количеству)
     for j in range(repetitions):
+
+        percentage = (current_iteration / total_iterations) * 100
+        print(f"\rПрогресс: {percentage:.1f}% ({current_iteration}/{total_iterations})", end="")
+
         #Добавляет сырое слово в wordle
         temp_word = wordle[:]
 
@@ -94,6 +101,7 @@ for i in range(iters):
             #Если нет буквы с неизвестной позицией
             if len(generated_word) == 5 and is_english_word(generated_word):
                 possible_words.add(generated_word)
+        current_iteration += 1
 
 for word in possible_words:
     if len(word) == 5:
