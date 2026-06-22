@@ -1,0 +1,153 @@
+import random
+from enchant import Dict
+
+wordle = [""] * 5
+word = input("Известные буквы: ")
+ban = list(input("Буквы для бана: "))
+iters = int(input("Итераций(для перестановки букв с неизвестной позицией): "))
+repetitions = int(input("Раз генерации слова (Рек.: > 500): "))
+unknown = [""] * 5
+
+# Возвращает рандомный индекс буквы
+def random_index(wordle):
+    free_index = [i for j, char in enumerate(wordle) if char == ""]
+    return random.choice(free_index)
+
+# Для каждой введённой буквы
+for i in range(len(word)):
+    indx = int(input(f"Позиция буквы '{word[i]}' (Введи > 5 для жёлтой): "))
+    indx -= 1                        # Чтобы вводить место буквы, а не её индекс
+    if 0 <= indx < 5:
+        wordle[indx] = word[i]       # Зелёная буква ставится на точную позицию
+    else:
+        indx = random_index(wordle)  # Поиск случайной пустой позиции
+        unknown[indx] = word[i]      # Жёлтая буква сохраняется для дальнейшей работы
+
+# Удаление пустых строк для работы с буквами
+unknown = [x for x in unknown if x != ""]
+
+# Список всех букв английского алфавита
+letters = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m",
+           "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z"]
+
+# Доступные буквы - все, кроме запрещённых и жёлтых
+available_letters = [letter for letter in letters if letter not in ban and letter not in unknown]
+
+# Поиск пустых слотов - индексы позиций, где ещё нет зелёных букв
+empty_word = [i for i, x in enumerate(wordle) if x == ""]  # Принимает пустой слот
+possible_words = set()  # Сет для того, чтобы использовать add (множество - уникальные значения)
+
+# Кэширование - чтобы не проверять одно и то же слово много раз
+word_cache = {}
+d = Dict("en_US")                    # Словарь английских слов
+
+
+# Проверка на существование слова
+def is_english_word(word):
+    if word in word_cache:           # Если уже проверяли это слово
+        return word_cache[word]      # Сохранённый результат Возвращается
+    # Проверяется на существование слова
+    result = d.check(word)
+    word_cache[word] = result        # Результат сохраняется в кэш
+    return result
+
+# Объявление переменных для подсчета итераций
+total_iterations = iters * repetitions  # Общее количество попыток
+current_iteration = 1                   # Текущая итерация (начиная с 1)
+
+# Объявление переменных, чтобы не вычислять каждый раз
+has_unknown = bool(unknown)             # Есть ли жёлтые буквы
+unknown_len = len(unknown)              # Сколько жёлтых букв
+empty_len = len(empty_word)             # Сколько пустых позиций
+
+# Если есть жёлтые буквы
+if has_unknown:
+    # Если неизвестных букв меньше или равно количеству пустых слотов берется len позиций
+    unknown_positions = empty_word[:unknown_len] if unknown_len <= empty_len else empty_word[:]
+    # Вычисление позиций для случайных букв
+    # Всего в слове 5 букв, unknown_len - количество известных жёлтых букв
+    remaining_count = 5 - unknown_len  # Сколько букв нужно добавить случайно
+
+    if unknown_len < empty_len:
+        # Оставшиеся пустые слоты будут заполнены случайными буквами
+        # Слоты с позиции unknown_len и до конца
+        random_positions = empty_word[unknown_len:]
+    else:
+        # Если неизвестных букв столько же, сколько пустых слотов
+        random_positions = []
+else:
+    # Если нет жёлтых букв - все позиции для неизвестных букв пусты
+    unknown_positions = []
+    # Все пустые слоты будут заполнены случайными буквами
+    random_positions = empty_word[:]  # Пустые позиции копируются
+    remaining_count = 5               # Все 5 букв будут случайными
+
+# Основной цикл - перестановка жёлтых букв
+for i in range(iters):
+    # Перемешивание неизвестных букв - каждый раз в новом порядке
+    unknown_letters = unknown.copy()  # Копируются жёлтые буквы
+    random.shuffle(unknown_letters)   # Перемешиваются
+
+    # Создание слов (По количеству повторений)
+    for j in range(repetitions):
+        # Подсчет процента выполнения
+        percentage = (current_iteration / total_iterations) * 100
+        print(f"\rПрогресс: {percentage:.1f}% ({current_iteration}/{total_iterations})", end="")
+
+        # Добавляет сырое слово в wordle
+        temp_word = wordle[:]                   # Текущее состояние зелёных букв копируется
+
+        # Если есть неизвестные буквы и свободные слоты
+        if has_unknown and empty_len > 0:
+            # Копирует пустые слоты и перемешивает их для дальнейшей работы
+            shuffled_positions = empty_word.copy()
+            random.shuffle(shuffled_positions)  # Перемешивание позиций жёлтых букв
+
+            # Очищение позиций неизвестных букв для работы со списком
+            for pos in empty_word:
+                temp_word[pos] = ""             #Пустые позиции очищаются
+
+            # Неизвестные буквы вставляются в список
+            for k in range(unknown_len):
+                if k < len(shuffled_positions): # Если есть куда вставлять
+                    temp_word[shuffled_positions[k]] = unknown_letters[k]  # Жёлтая буква вставляется
+
+            # Поиск оставшихся пустых позиций
+            remaining_empty = [i for i, x in enumerate(temp_word) if x == ""]
+            for idx in remaining_empty:
+                temp_word[idx] = random.choice(available_letters)         # Список заполняется случайными
+        else:
+            # Оставшиеся пустые места заполняются случайными буквами
+            for idx in empty_word:
+                temp_word[idx] = random.choice(available_letters)
+
+        # Добавляет сгенерированную букву к списку
+        generated_word = "".join(temp_word)     # Буквы склеиваются в слово
+
+        # Проверяется длина сгенерированного слова
+        if len(generated_word) != 5:
+            current_iteration += 1              # Увеличиваем счётчик
+            continue                            # Слово не проходит
+
+        # Если есть жёлтые буквы - проверяются
+        if has_unknown:
+            valid = True                        # Предполагаем, что всё правильно
+            # Жёлтые буквы проверяются
+            for letter in unknown:
+                # Каждая жёлтая буква должна встречаться в слове 1 раз
+                if generated_word.count(letter) != 1:
+                    valid = False
+                    break                       # Итерация завершается
+            # Если какая-то жёлтая буква использована не 1 раз
+            if not valid:
+                current_iteration += 1          # Счётчик +1
+                continue  # Слово не засчитывается, следующая итерация
+
+        # Слово проверяется на существование в словаре
+        if is_english_word(generated_word):
+            possible_words.add(generated_word)  # Если существует - добавляется в множество возможных слов
+        current_iteration += 1                  # Счётчик +1
+
+print()  # Чтобы слова показывались после итераций
+for word in possible_words:
+    print(word)
