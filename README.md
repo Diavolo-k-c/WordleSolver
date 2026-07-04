@@ -1,0 +1,1 @@
+If You wanna download latest version of project - download "Words", "updated_solver.py" and save them in same project. This version includes a dictionary-based word search, whereas earlier versions generate words.
